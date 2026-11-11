@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universal Launcher App</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #311042 100%);
+            --panel-bg: rgba(255, 255, 255, 0.08);
+            --panel-border: rgba(255, 255, 255, 0.15);
+            --primary-accent: #6366f1;
+            --primary-hover: #4f46e5;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            background: var(--bg-gradient);
+            min-height: 100vh;
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* --- MENYU (LAUNCHER) --- */
+        #launcher-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+            width: 100%;
+        }
+
+        .header-widget {
+            text-align: center;
+            margin-bottom: 40px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--panel-border);
+            padding: 25px 40px;
+            border-radius: 24px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .header-widget h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            letter-spacing: -1px;
+            margin-bottom: 5px;
+        }
+
+        .header-widget p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 25px;
+            width: 100%;
+            max-width: 850px;
+        }
+
+        .app-card {
+            background: var(--panel-bg);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--panel-border);
+            border-radius: 24px;
+            padding: 30px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        .app-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            background: rgba(255, 255, 255, 0.14);
+            border-color: var(--primary-accent);
+            box-shadow: 0 20px 35px rgba(99, 102, 241, 0.3);
+        }
+
+        .app-card-icon {
+            width: 75px;
+            height: 75px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.2rem;
+            margin-bottom: 18px;
+            color: white;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+        }
+
+        .app-card h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        /* --- TO'LIQ EKRAN ILOVALAR KONTEYNERI --- */
+        .app-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #0f172a;
+            z-index: 100;
+            display: none;
+            flex-direction: column;
+        }
+
+        .app-screen.active {
+            display: flex;
+        }
+
+        .app-header {
+            height: 60px;
+            background: #1e293b;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            border-bottom: 1px solid #334155;
+            flex-shrink: 0;
+        }
+
+        .app-header-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .back-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.2s;
+        }
+
+        .back-btn:hover {
+            background: #ef4444;
+        }
+
+        .app-content {
+            flex-grow: 1;
+            overflow: auto;
+            position: relative;
+        }
+
+        /* --- 1-ILOVA: RASM TAHRIRLASH VA KESISH --- */
+        .editor-container {
+            display: flex;
+            height: 100%;
+            width: 100%;
+        }
+
+        .editor-workspace {
+            flex-grow: 1;
+            background: #020617;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .editor-workspace img {
+            max-width: 100%;
+            max-height: 100%;
+            display: block;
+        }
+
+        .editor-sidebar {
+            width: 320px;
+            background: #1e293b;
+            border-left: 1px solid #334155;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+        }
+
+        .upload-box {
+            border: 2px dashed #475569;
+            border-radius: 12px;
+            padding: 30px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+
+        .upload-box:hover {
+            border-color: var(--primary-accent);
+        }
+
+        .ctrl-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .ctrl-group label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .ctrl-group input[type="range"] {
+            width: 100%;
+            accent-color: var(--primary-accent);
+        }
+
+        .btn-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .action-btn {
+            background: #334155;
+            border: none;
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: background 0.2s;
+        }
+
+        .action-btn:hover {
+            background: #475569;
+        }
+
+        .action-btn.primary {
+            background: var(--primary-accent);
+        }
+
+        .action-btn.primary:hover {
+            background: var(--primary-hover);
+        }
+
+        /* --- 2-ILOVA: KALENDAR --- */
+        .calendar-layout {
+            display: grid;
+            grid-template-columns: 1fr 340px;
+            height: 100%;
+            max-width: 1300px;
+            margin: 0 auto;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        .cal-main {
+            background: #1e293b;
+            border-radius: 20px;
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid #334155;
+        }
+
+        .cal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .cal-nav {
+            display: flex;
+            gap: 10px;
+        }
+
+        .cal-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 10px;
+            flex-grow: 1;
+        }
+
+        .cal-weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            text-align: center;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+
+        .cal-day {
+            background: rgba(255,255,255,0.03);
+            border-radius: 12px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: all 0.2s;
+            min-height: 80px;
+        }
+
+        .cal-day:hover:not(.empty) {
+            border-color: var(--primary-accent);
+            background: rgba(255,255,255,0.08);
+        }
+
+        .cal-day.today {
+            background: var(--primary-accent);
+            color: white;
+            font-weight: bold;
+        }
+
+        .cal-day.selected:not(.today) {
+            border-color: #38bdf8;
+            background: rgba(56, 189, 248, 0.15);
+        }
+
+        .cal-sidebar {
+            background: #1e293b;
+            border-radius: 20px;
+            padding: 25px;
+            border: 1px solid #334155;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .event-item {
+            background: #0f172a;
+            padding: 12px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 4px solid var(--primary-accent);
+        }
+
+        /* --- 3-ILOVA: KALKULYATOR --- */
+        .calc-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            padding: 20px;
+        }
+
+        .calculator {
+            width: 100%;
+            max-width: 380px;
+            background: #1e293b;
+            border-radius: 28px;
+            padding: 25px;
+            border: 1px solid #334155;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .calc-screen {
+            background: #0f172a;
+            border-radius: 16px;
+            padding: 20px;
+            text-align: right;
+            margin-bottom: 20px;
+            border: 1px solid #334155;
+        }
+
+        .calc-history {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            min-height: 20px;
+            word-wrap: break-word;
+        }
+
+        .calc-output {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin-top: 5px;
+            overflow-x: auto;
+        }
+
+        .calc-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+
+        .calc-btn {
+            height: 65px;
+            border-radius: 16px;
+            border: none;
+            background: #334155;
+            color: white;
+            font-size: 1.3rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .calc-btn:active {
+            transform: scale(0.95);
+        }
+
+        .calc-btn.op {
+            background: #6366f1;
+        }
+
+        .calc-btn.op:hover {
+            background: #4f46e5;
+        }
+
+        .calc-btn.action {
+            background: #475569;
+        }
+
+        .calc-btn.danger {
+            background: #ef4444;
+        }
+
+        .calc-btn.equals {
+            background: #10b981;
+            grid-column: span 2;
+        }
+
+        @media (max-width: 900px) {
+            .editor-container {
+                flex-direction: column;
+            }
+            .editor-sidebar {
+                width: 100%;
+                height: 300px;
+            }
+            .calendar-layout {
+                grid-template-columns: 1fr;
+                overflow-y: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ASOSIY MENYU -->
+    <div id="launcher-screen">
+        <div class="header-widget">
+            <h1 id="clock-display">00:00:00</h1>
+            <p id="date-display">1 Yanvar, 2026</p>
+        </div>
+
+        <div class="menu-grid">
+            <div class="app-card" onclick="openApp('crop-app')">
+                <div class="app-card-icon" style="background: linear-gradient(135deg, #ec4899, #8b5cf6);">
+                    <i class="fas fa-crop-alt"></i>
+                </div>
+                <h3>Rasm Tahrirlash</h3>
+            </div>
+
+            <div class="app-card" onclick="openApp('calendar-app')">
+                <div class="app-card-icon" style="background: linear-gradient(135deg, #3b82f6, #06b6d4);">
+                    <i class="fas fa-calendar-alt"></i>
+                </div>
+                <h3>Kalendar</h3>
+            </div>
+
+            <div class="app-card" onclick="openApp('calc-app')">
+                <div class="app-card-icon" style="background: linear-gradient(135deg, #10b981, #059669);">
+                    <i class="fas fa-calculator"></i>
+                </div>
+                <h3>Kalkulyator</h3>
+            </div>
+        </div>
+    </div>
+
+    <!-- 1-ILOVA: RASM TAHRIRLASH -->
+    <div class="app-screen" id="crop-app">
+        <div class="app-header">
+            <div class="app-header-title"><i class="fas fa-crop-alt"></i> Rasm Kesish va Tahrirlash</div>
+            <button class="back-btn" onclick="closeApp('crop-app')"><i class="fas fa-arrow-left"></i> Menyoga Qaytish</button>
+        </div>
+        <div class="app-content">
+            <div class="editor-container">
+                <div class="editor-workspace">
+                    <img id="image-element" src="" alt="Tahrirlash uchun rasm" style="display: none;">
+                    <div id="upload-placeholder" class="upload-box" onclick="document.getElementById('file-input').click()">
+                        <i class="fas fa-cloud-upload-alt" style="font-size: 3rem; color: #64748b; margin-bottom: 10px;"></i>
+                        <p>Rasm yuklash uchun bosing</p>
+                    </div>
+                    <input type="file" id="file-input" accept="image/*" style="display: none;" onchange="loadImage(event)">
+                </div>
+                <div class="editor-sidebar">
+                    <button class="action-btn" onclick="document.getElementById('file-input').click()">
+                        <i class="fas fa-folder-open"></i> Boshqa Rasm
+                    </button>
+
+                    <div class="ctrl-group">
+                        <label>Yorqinlik <span id="val-bright">100%</span></label>
+                        <input type="range" id="slider-bright" min="0" max="200" value="100" oninput="applyFilters()">
+                    </div>
+                    <div class="ctrl-group">
+                        <label>Kontrast <span id="val-contrast">100%</span></label>
+                        <input type="range" id="slider-contrast" min="0" max="200" value="100" oninput="applyFilters()">
+                    </div>
+                    <div class="ctrl-group">
+                        <label>To'yinganlik <span id="val-saturate">100%</span></label>
+                        <input type="range" id="slider-saturate" min="0" max="200" value="100" oninput="applyFilters()">
+                    </div>
+
+                    <div class="btn-grid">
+                        <button class="action-btn" onclick="rotateImg(-90)"><i class="fas fa-undo"></i> -90°</button>
+                        <button class="action-btn" onclick="rotateImg(90)"><i class="fas fa-redo"></i> +90°</button>
+                    </div>
+
+                    <button class="action-btn primary" onclick="cropAndDownload()">
+                        <i class="fas fa-download"></i> Kesish va Saqlash
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2-ILOVA: KALENDAR -->
+    <div class="app-screen" id="calendar-app">
+        <div class="app-header">
+            <div class="app-header-title"><i class="fas fa-calendar-alt"></i> Kalendar va Rejalar</div>
+            <button class="back-btn" onclick="closeApp('calendar-app')"><i class="fas fa-arrow-left"></i> Menyoga Qaytish</button>
+        </div>
+        <div class="app-content">
+            <div class="calendar-layout">
+                <div class="cal-main">
+                    <div class="cal-header">
+                        <h2 id="cal-month-year">Noyabr 2026</h2>
+                        <div class="cal-nav">
+                            <button class="action-btn" onclick="changeMonth(-1)"><i class="fas fa-chevron-left"></i></button>
+                            <button class="action-btn" onclick="goToday()">Bugun</button>
+                            <button class="action-btn" onclick="changeMonth(1)"><i class="fas fa-chevron-right"></i></button>
+                        </div>
+                    </div>
+                    <div class="cal-weekdays">
+                        <div>Dush</div><div>Sesh</div><div>Chor</div><div>Pay</div><div>Jum</div><div>Shan</div><div>Yak</div>
+                    </div>
+                    <div class="cal-grid" id="cal-days-grid"></div>
+                </div>
+
+                <div class="cal-sidebar">
+                    <h3 id="cal-selected-date-title" style="margin-bottom: 15px;">Tanlangan kun</h3>
+                    <form onsubmit="addCalendarEvent(event)" style="display:flex; flex-direction:column; gap:10px; margin-bottom:20px;">
+                        <input type="text" id="evt-title" placeholder="Reja nomi..." required style="padding:10px; border-radius:8px; border:1px solid #334155; background:#0f172a; color:white; outline:none;">
+                        <input type="time" id="evt-time" required style="padding:10px; border-radius:8px; border:1px solid #334155; background:#0f172a; color:white; outline:none;">
+                        <button type="submit" class="action-btn primary"><i class="fas fa-plus"></i> Qo'shish</button>
+                    </form>
+                    <div id="evt-list" style="flex-grow:1; overflow-y:auto;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3-ILOVA: KALKULYATOR -->
+    <div class="app-screen" id="calc-app">
+        <div class="app-header">
+            <div class="app-header-title"><i class="fas fa-calculator"></i> Kalkulyator</div>
+            <button class="back-btn" onclick="closeApp('calc-app')"><i class="fas fa-arrow-left"></i> Menyoga Qaytish</button>
+        </div>
+        <div class="app-content">
+            <div class="calc-wrapper">
+                <div class="calculator">
+                    <div class="calc-screen">
+                        <div class="calc-history" id="calc-hist"></div>
+                        <div class="calc-output" id="calc-out">0</div>
+                    </div>
+                    <div class="calc-grid">
+                        <button class="calc-btn danger" onclick="calcClear()">C</button>
+                        <button class="calc-btn action" onclick="calcDel()"><i class="fas fa-backspace"></i></button>
+                        <button class="calc-btn action" onclick="calcAppend('%')">%</button>
+                        <button class="calc-btn op" onclick="calcAppend('/')">÷</button>
+
+                        <button class="calc-btn" onclick="calcAppend('7')">7</button>
+                        <button class="calc-btn" onclick="calcAppend('8')">8</button>
+                        <button class="calc-btn" onclick="calcAppend('9')">9</button>
+                        <button class="calc-btn op" onclick="calcAppend('*')">×</button>
+
+                        <button class="calc-btn" onclick="calcAppend('4')">4</button>
+                        <button class="calc-btn" onclick="calcAppend('5')">5</button>
+                        <button class="calc-btn" onclick="calcAppend('6')">6</button>
+                        <button class="calc-btn op" onclick="calcAppend('-')">-</button>
+
+                        <button class="calc-btn" onclick="calcAppend('1')">1</button>
+                        <button class="calc-btn" onclick="calcAppend('2')">2</button>
+                        <button class="calc-btn" onclick="calcAppend('3')">3</button>
+                        <button class="calc-btn op" onclick="calcAppend('+')">+</button>
+
+                        <button class="calc-btn" onclick="calcAppend('0')">0</button>
+                        <button class="calc-btn" onclick="calcAppend('.')">.</button>
+                        <button class="calc-btn equals" onclick="calcSolve()">=</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CROPPER.JS KUTUBXONASI -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+
+    <script>
+        /* --- ASOSIY SOAT VA TIZIM --- */
+        const monthsUz = ["Yanvar", "Fevral", "Mart", "Aprel", "May", "Iyun", "Iyul", "Avgust", "Sentabr", "Oktabr", "Noyabr", "Dekabr"];
+        const daysUz = ["Yakshanba", "Dushanba", "Seshanba", "Chorshanba", "Payshanba", "Juma", "Shanba"];
+
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('clock-display').innerText = now.toTimeString().split(' ')[0];
+            document.getElementById('date-display').innerText = `${daysUz[now.getDay()]}, ${now.getDate()}-${monthsUz[now.getMonth()]} ${now.getFullYear()}`;
+        }
+        setInterval(updateTime, 1000);
+        updateTime();
+
+        function openApp(appId) {
+            document.getElementById(appId).classList.add('active');
+            if(appId === 'calendar-app') renderCalendar();
+        }
+
+        function closeApp(appId) {
+            document.getElementById(appId).classList.remove('active');
+        }
+
+        /* --- 1-ILOVA LOGIKASI: RASM TAHRIRLASH --- */
+        let cropper = null;
+        let currentRotation = 0;
+
+        function loadImage(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                const img = document.getElementById('image-element');
+                img.src = evt.target.result;
+                img.style.display = 'block';
+                document.getElementById('upload-placeholder').style.display = 'none';
+
+                if (cropper) cropper.destroy();
+                currentRotation = 0;
+
+                cropper = new Cropper(img, {
+                    viewMode: 1,
+                    autoCropArea: 0.8,
+                    background: false
+                });
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function applyFilters() {
+            if (!cropper) return;
+            const b = document.getElementById('slider-bright').value;
+            const c = document.getElementById('slider-contrast').value;
+            const s = document.getElementById('slider-saturate').value;
+
+            document.getElementById('val-bright').innerText = b + '%';
+            document.getElementById('val-contrast').innerText = c + '%';
+            document.getElementById('val-saturate').innerText = s + '%';
+
+            const container = cropper.cropper;
+            container.querySelector('.cropper-canvas img').style.filter = `brightness(${b}%) contrast(${c}%) saturate(${s}%)`;
+        }
+
+        function rotateImg(deg) {
+            if (!cropper) return;
+            currentRotation += deg;
+            cropper.rotateTo(currentRotation);
+        }
+
+        function cropAndDownload() {
+            if (!cropper) return;
+            const canvas = cropper.getCroppedCanvas();
+            const link = document.createElement('a');
+            link.download = 'tahrirlangan-rasm.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+
+        /* --- 2-ILOVA LOGIKASI: KALENDAR --- */
+        let calDate = new Date();
+        let selectedCalDate = new Date();
+        let calEvents = JSON.parse(localStorage.getItem('sys_events')) || {};
+
+        function renderCalendar() {
+            const year = calDate.getFullYear();
+            const month = calDate.getMonth();
+
+            document.getElementById('cal-month-year').innerText = `${monthsUz[month]} ${year}`;
+            const grid = document.getElementById('cal-days-grid');
+            grid.innerHTML = '';
+
+            const firstDay = new Date(year, month, 1).getDay();
+            const startOffset = (firstDay === 0 ? 7 : firstDay) - 1;
+            const totalDays = new Date(year, month + 1, 0).getDate();
+
+            for (let i = 0; i < startOffset; i++) {
+                grid.appendChild(document.createElement('div'));
+            }
+
+            const today = new Date();
+            for (let day = 1; day <= totalDays; day++) {
+                const cell = document.createElement('div');
+                cell.className = 'cal-day';
+                cell.innerHTML = `<span>${day}</span>`;
+
+                const dateKey = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+
+                if (day === today.getDate() && month === today.getMonth() && year === today.getFullYear()) {
+                    cell.classList.add('today');
+                }
+                if (day === selectedCalDate.getDate() && month === selectedCalDate.getMonth() && year === selectedCalDate.getFullYear()) {
+                    cell.classList.add('selected');
+                }
+
+                if (calEvents[dateKey] && calEvents[dateKey].length > 0) {
+                    cell.innerHTML += `<span style="font-size:0.7rem; color:#ef4444;">● ${calEvents[dateKey].length} reja</span>`;
+                }
+
+                cell.onclick = () => {
+                    selectedCalDate = new Date(year, month, day);
+                    renderCalendar();
+                };
+                grid.appendChild(cell);
+            }
+            renderEvents();
+        }
+
+        function changeMonth(dir) {
+            calDate.setMonth(calDate.getMonth() + dir);
+            renderCalendar();
+        }
+
+        function goToday() {
+            calDate = new Date();
+            selectedCalDate = new Date();
+            renderCalendar();
+        }
+
+        function renderEvents() {
+            const year = selectedCalDate.getFullYear();
+            const month = selectedCalDate.getMonth();
+            const day = selectedCalDate.getDate();
+            const dateKey = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+
+            document.getElementById('cal-selected-date-title').innerText = `${day}-${monthsUz[month]}, ${year}`;
+            const list = document.getElementById('evt-list');
+            list.innerHTML = '';
+
+            const items = calEvents[dateKey] || [];
+            if (items.length === 0) {
+                list.innerHTML = `<p style="color:var(--text-muted); font-size:0.9rem;">Bugun uchun rejalar yo'q</p>`;
+                return;
+            }
+
+            items.forEach((item, idx) => {
+                list.innerHTML += `
+                    <div class="event-item">
+                        <div>
+                            <strong>${item.title}</strong>
+                            <div style="font-size:0.8rem; color:var(--text-muted);"><i class="far fa-clock"></i> ${item.time}</div>
+                        </div>
+                        <i class="fas fa-trash" style="color:#ef4444; cursor:pointer;" onclick="deleteEvent('${dateKey}', ${idx})"></i>
+                    </div>
+                `;
+            });
+        }
+
+        function addCalendarEvent(e) {
+            e.preventDefault();
+            const year = selectedCalDate.getFullYear();
+            const month = selectedCalDate.getMonth();
+            const day = selectedCalDate.getDate();
+            const dateKey = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+
+            const title = document.getElementById('evt-title').value;
+            const time = document.getElementById('evt-time').value;
+
+            if (!calEvents[dateKey]) calEvents[dateKey] = [];
+            calEvents[dateKey].push({ title, time });
+
+            localStorage.setItem('sys_events', JSON.stringify(calEvents));
+            document.getElementById('evt-title').value = '';
+            document.getElementById('evt-time').value = '';
+            renderCalendar();
+        }
+
+        function deleteEvent(dateKey, idx) {
+            calEvents[dateKey].splice(idx, 1);
+            if (calEvents[dateKey].length === 0) delete calEvents[dateKey];
+            localStorage.setItem('sys_events', JSON.stringify(calEvents));
+            renderCalendar();
+        }
+
+        /* --- 3-ILOVA LOGIKASI: KALKULYATOR --- */
+        let calcExpr = '';
+
+        function calcAppend(val) {
+            calcExpr += val;
+            document.getElementById('calc-out').innerText = calcExpr;
+        }
+
+        function calcClear() {
+            calcExpr = '';
+            document.getElementById('calc-out').innerText = '0';
+            document.getElementById('calc-hist').innerText = '';
+        }
+
+        function calcDel() {
+            calcExpr = calcExpr.slice(0, -1);
+            document.getElementById('calc-out').innerText = calcExpr || '0';
+        }
+
+        function calcSolve() {
+            try {
+                document.getElementById('calc-hist').innerText = calcExpr + ' =';
+                const res = Function('"use strict"; return (' + calcExpr + ')')();
+                calcExpr = String(res);
+                document.getElementById('calc-out').innerText = calcExpr;
+            } catch (err) {
+                document.getElementById('calc-out').innerText = 'Xatolik';
+                calcExpr = '';
+            }
+        }
+    </script>
+</body>
+</html>
